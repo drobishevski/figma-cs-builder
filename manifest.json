@@ -1,7 +1,17 @@
 {
   "name": "ComponentSet Builder",
-  "id": "1531962770117682659",
+  "id": "1531963445249859051",
   "api": "1.0.0",
   "main": "code.js",
-  "editorType": ["figma"]
+  "capabilities": [],
+  "enableProposedApi": false,
+  "documentAccess": "dynamic-page",
+  "editorType": [
+    "figma"
+  ],
+  "networkAccess": {
+    "allowedDomains": [
+      "none"
+    ]
+  }
 }
