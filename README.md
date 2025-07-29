@@ -25,3 +25,80 @@ This plugin is designed to clean up and standardize layouts in Figma component s
 
 - Works with Figma `ComponentSet` nodes only
 
+## 🛠 Development
+
+### Prerequisites
+
+- Node.js (v14 or higher)
+- npm or yarn
+
+### Setup
+
+1. Clone the repository
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+
+### Build Commands
+
+- **Build once:**
+  ```bash
+  npm run build
+  ```
+
+- **Watch mode (for development):**
+  ```bash
+  npm run dev
+  # or
+  npm run watch
+  ```
+
+- **Lint code:**
+  ```bash
+  npm run lint
+  npm run lint:fix
+  ```
+
+### Project Structure
+
+```
+figma-cs-builder/
+├── manifest.json      # Plugin configuration
+├── code.js           # Compiled JavaScript (generated)
+├── code.ts           # TypeScript source code
+├── package.json      # Dependencies and scripts
+├── tsconfig.json     # TypeScript configuration
+├── .gitignore        # Git ignore rules
+└── README.md         # This file
+```
+
+### TypeScript Configuration
+
+The project uses TypeScript with strict type checking and Figma plugin typings. The build process automatically compiles `code.ts` to `code.js` which is used by the Figma plugin.
+
+## 🔍 API Compliance
+
+This plugin has been verified against the official Figma Plugin API documentation:
+
+- ✅ **ComponentSetNode API**: Uses correct properties and methods
+- ✅ **Guides API**: Properly creates and assigns guides arrays
+- ✅ **Resize API**: Uses `resize()` method correctly
+- ✅ **Styling API**: Applies `cornerRadius` and `strokes` properties
+- ✅ **Selection API**: Properly handles `figma.currentPage.selection`
+
+### Key API Features Used:
+
+- `ComponentSetNode.children` - Access to variant components
+- `ComponentSetNode.resize()` - Resize the component set
+- `ComponentSetNode.cornerRadius` - Apply corner radius
+- `ComponentSetNode.strokes` - Remove stroke styling
+- `ComponentSetNode.guides` - Add layout guides
+- `figma.currentPage.selection` - Get selected nodes
+- `figma.notify()` - Show user feedback
+- `figma.closePlugin()` - Proper plugin termination
+
+## 📝 License
+
+See [LICENSE](LICENSE) file for details.
+

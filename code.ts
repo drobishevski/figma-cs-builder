@@ -1,22 +1,115 @@
-// This file holds the main code for plugins. Code in this file has access to
-// the *figma document* via the figma global object.
-// You can access browser APIs in the <script> tag inside "ui.html" which has a
-// full browser environment (See https://www.figma.com/plugin-docs/how-plugins-run).
+/// <reference types="@figma/plugin-typings" />
 
-// This plugin creates rectangles on the screen.
-const numberOfRectangles = 5;
+// ComponentSet Builder - Figma Plugin
+// Automatically aligns ComponentSet variants into rows and columns, adds rulers, and applies consistent spacing and styling.
 
-const nodes: SceneNode[] = [];
-for (let i = 0; i < numberOfRectangles; i++) {
-  const rect = figma.createRectangle();
-  rect.x = i * 150;
-  rect.fills = [{ type: 'SOLID', color: { r: 1, g: 0.5, b: 0 } }];
-  figma.currentPage.appendChild(rect);
-  nodes.push(rect);
-}
-figma.currentPage.selection = nodes;
-figma.viewport.scrollAndZoomIntoView(nodes);
+figma.on("run", () => {
+  function groupByAxis(variants: SceneNode[], axis: 'x' | 'y' = 'x', threshold: number = 20) {
+    const groups: Array<{ key: number; variants: SceneNode[] }> = [];
+    
+    for (const variant of variants) {
+      if (!('x' in variant) || !('y' in variant)) continue;
+      
+      const key = axis === 'x' ? variant.y : variant.x;
+      let group = groups.find(g => Math.abs(g.key - key) <= threshold);
+      
+      if (!group) {
+        group = { key, variants: [] };
+        groups.push(group);
+      }
+      group.variants.push(variant);
+    }
+    
+    return groups;
+  }
 
-// Make sure to close the plugin when you're done. Otherwise the plugin will
-// keep running, which shows the cancel button at the bottom of the screen.
-figma.closePlugin();
+  function alignAndResize(componentSet: ComponentSetNode) {
+    const variants = componentSet.children.filter(n =>
+      'x' in n && 'y' in n && 'width' in n && 'height' in n
+    ) as (SceneNode & { x: number; y: number; width: number; height: number })[];
+
+    const padding = 80;
+
+    // Add padding from edges
+    const dx = padding - Math.min(...variants.map(v => v.x));
+    const dy = padding - Math.min(...variants.map(v => v.y));
+    
+    for (const v of variants) {
+      v.x += dx;
+      v.y += dy;
+    }
+
+    // Align rows
+    const rows = groupByAxis(variants, 'x');
+    for (const row of rows) {
+      const refY = (row.variants[0] as typeof variants[0]).y;
+      for (const v of row.variants) {
+        (v as typeof variants[0]).y = refY;
+      }
+    }
+
+    // Align columns
+    const cols = groupByAxis(variants, 'y');
+    for (const col of cols) {
+      const refX = (col.variants[0] as typeof variants[0]).x;
+      for (const v of col.variants) {
+        (v as typeof variants[0]).x = refX;
+      }
+    }
+
+    // Resize component set
+    const contentRight = Math.max(...variants.map(v => v.x + v.width));
+    const contentBottom = Math.max(...variants.map(v => v.y + v.height));
+
+    const newWidth = contentRight + padding;
+    const newHeight = contentBottom + padding;
+    componentSet.resize(newWidth, newHeight);
+
+    // Apply styling
+    componentSet.cornerRadius = 32;
+    componentSet.strokes = [];
+
+    // Add guides - create new array and assign it
+    const xGuides = new Set<number>();
+    const yGuides = new Set<number>();
+
+    for (const row of rows) {
+      const top = Math.min(...row.variants.map(v => (v as typeof variants[0]).y));
+      const bottom = Math.max(...row.variants.map(v => (v as typeof variants[0]).y + (v as typeof variants[0]).height));
+      yGuides.add(top);
+      yGuides.add(bottom);
+    }
+
+    for (const col of cols) {
+      const left = Math.min(...col.variants.map(v => (v as typeof variants[0]).x));
+      const right = Math.max(...col.variants.map(v => (v as typeof variants[0]).x + (v as typeof variants[0]).width));
+      xGuides.add(left);
+      xGuides.add(right);
+    }
+
+    // Create new guides array and assign it (as per Figma API documentation)
+    const newGuides = [
+      ...[...xGuides].sort((a, b) => a - b).map(x => ({ axis: 'X' as const, offset: x })),
+      ...[...yGuides].sort((a, b) => a - b).map(y => ({ axis: 'Y' as const, offset: y }))
+    ];
+    
+    componentSet.guides = newGuides;
+  }
+
+  const selection = figma.currentPage.selection;
+  
+  if (selection.length === 0) {
+    figma.notify("Please select a ComponentSet.");
+    figma.closePlugin();
+  } else {
+    let _count = 0;
+    for (const node of selection) {
+      if (node.type === 'COMPONENT_SET') {
+        alignAndResize(node);
+        _count++;
+      }
+    }
+    figma.notify("Done ✔️");
+    figma.closePlugin();
+  }
+});
